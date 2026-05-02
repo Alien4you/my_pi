@@ -41,7 +41,7 @@ export default function piStatusline(pi: ExtensionAPI) {
 			const empty = barLen - filled;
 			const color = pct >= 80 ? "error" : pct >= 50 ? "warning" : "success";
 			const bar = theme.fg(color, "█".repeat(filled)) + theme.fg("dim", "░".repeat(empty));
-			ctxStr = bar + theme.fg(color, ` ${pct}%`);
+			ctxStr = bar + theme.fg(color, ` ${Math.round(pct)}%`);
 		}
 
 		// Session usage — ↑input ↓output cost
@@ -55,7 +55,7 @@ export default function piStatusline(pi: ExtensionAPI) {
 		const branch = footerData.getGitBranch();
 		const branchStr = branch ? sep + theme.fg("dim", `\ue0a0 ${branch}`) : "";
 
-		const full = theme.fg("accent", `⬡ ${model}`) + sep + ctxStr + sep + usageStr + sep + costStr + branchStr;
+		const full = theme.fg("accent", `${model}`) + sep + ctxStr + sep + usageStr + sep + costStr + branchStr;
 		return [truncateToWidth(full, width)];
 	};
 

@@ -147,7 +147,9 @@ fi
 # ── 8. Extensions ─────────────────────────────────────────────────────────────
 header "Extensions"
 mkdir -p "${PI_AGENT}/extensions"
-for ext in mcp-list statusline; do
+
+# Single-file extensions
+for ext in mcp-list statusline memory context zz-read-only-mode; do
   if [[ -f "${SCRIPT_DIR}/extensions/${ext}.ts" ]]; then
     cp "${SCRIPT_DIR}/extensions/${ext}.ts" "${PI_AGENT}/extensions/${ext}.ts"
     ok "${ext}.ts"
@@ -156,10 +158,57 @@ for ext in mcp-list statusline; do
   fi
 done
 
+# npm package extensions (copy dir + npm install)
+for pkg in bash-guard filechanges; do
+  if [[ -d "${SCRIPT_DIR}/extensions/${pkg}" ]]; then
+    cp -r "${SCRIPT_DIR}/extensions/${pkg}" "${PI_AGENT}/extensions/${pkg}"
+    (cd "${PI_AGENT}/extensions/${pkg}" && npm install --silent 2>/dev/null) && ok "${pkg}" || warn "${pkg} — npm install failed"
+  else
+    warn "${pkg}/ — not found"
+  fi
+done
+
+# Subagents extension (directory, no package.json)
+if [[ -d "${SCRIPT_DIR}/extensions/subagents" ]]; then
+  cp -r "${SCRIPT_DIR}/extensions/subagents" "${PI_AGENT}/extensions/subagents"
+  ok "subagents"
+else
+  warn "subagents/ — not found"
+fi
+
+# ── Skills ────────────────────────────────────────────────────────────────────
+header "Skills"
+mkdir -p "${PI_AGENT}/skills"
+for skill in orchestrator stop-slop; do
+  if [[ -d "${SCRIPT_DIR}/skills/${skill}" ]]; then
+    cp -r "${SCRIPT_DIR}/skills/${skill}" "${PI_AGENT}/skills/${skill}"
+    ok "${skill}"
+  else
+    warn "${skill}/ — not found"
+  fi
+done
+
 # ── 9. AGENTS.md ───────────────────────────────────────────────────────────────
 header "AGENTS.md"
+echo "  Model architecture?"
+echo "  1) Dense  (Claude, Anthropic, Llama)"
+echo "  2) MoE    (DeepSeek, Mixtral, Gemini, Grok)"
+echo "  3) Hybrid (both)"
+read -r -p "  Choice [1-3]: " ARCH_CHOICE
+
 cp "${SCRIPT_DIR}/AGENTS.md" "${PI_AGENT}/AGENTS.md"
-ok "AGENTS.md copied from repo."
+
+if [[ "$ARCH_CHOICE" == "2" || "$ARCH_CHOICE" == "3" ]]; then
+  if [[ -f "${SCRIPT_DIR}/agents/moe-supplement.md" ]]; then
+    echo "" >> "${PI_AGENT}/AGENTS.md"
+    cat "${SCRIPT_DIR}/agents/moe-supplement.md" >> "${PI_AGENT}/AGENTS.md"
+    ok "AGENTS.md + MoE supplement."
+  else
+    warn "moe-supplement.md not found — using base only."
+  fi
+else
+  ok "AGENTS.md (dense)."
+fi
 
 # ── Done ──────────────────────────────────────────────────────────────────────
 echo -e "\n${BOLD}${CYAN}━━  Done  ━━${RESET}"
