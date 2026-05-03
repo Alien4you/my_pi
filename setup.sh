@@ -149,7 +149,7 @@ header "Extensions"
 mkdir -p "${PI_AGENT}/extensions"
 
 # Single-file extensions
-for ext in mcp-list statusline memory context zz-read-only-mode; do
+for ext in mcp-list statusline memory context zz-read-only-mode web-search; do
   if [[ -f "${SCRIPT_DIR}/extensions/${ext}.ts" ]]; then
     cp "${SCRIPT_DIR}/extensions/${ext}.ts" "${PI_AGENT}/extensions/${ext}.ts"
     ok "${ext}.ts"
@@ -159,7 +159,7 @@ for ext in mcp-list statusline memory context zz-read-only-mode; do
 done
 
 # npm package extensions (copy dir + npm install)
-for pkg in bash-guard filechanges; do
+for pkg in bash-guard; do
   if [[ -d "${SCRIPT_DIR}/extensions/${pkg}" ]]; then
     cp -r "${SCRIPT_DIR}/extensions/${pkg}" "${PI_AGENT}/extensions/${pkg}"
     (cd "${PI_AGENT}/extensions/${pkg}" && npm install --silent 2>/dev/null) && ok "${pkg}" || warn "${pkg} — npm install failed"
@@ -179,16 +179,36 @@ fi
 # ── Skills ────────────────────────────────────────────────────────────────────
 header "Skills"
 mkdir -p "${PI_AGENT}/skills"
-for skill in orchestrator stop-slop; do
-  if [[ -d "${SCRIPT_DIR}/skills/${skill}" ]]; then
-    cp -r "${SCRIPT_DIR}/skills/${skill}" "${PI_AGENT}/skills/${skill}"
+for skill_dir in "${SCRIPT_DIR}"/skills/*/; do
+  skill=$(basename "$skill_dir")
+  # caveman-* skills use global ~/.agents/skills/ — skip to avoid collision
+  [[ "$skill" == caveman-* ]] && continue
+  if [[ -d "$skill_dir" ]]; then
+    cp -r "$skill_dir" "${PI_AGENT}/skills/${skill}"
     ok "${skill}"
-  else
-    warn "${skill}/ — not found"
   fi
 done
 
-# ── 9. AGENTS.md ───────────────────────────────────────────────────────────────
+# ── Themes ────────────────────────────────────────────────────────────────────
+header "Themes"
+mkdir -p "${PI_AGENT}/themes"
+if [[ -f "${SCRIPT_DIR}/themes/one-dark-pro.json" ]]; then
+  cp "${SCRIPT_DIR}/themes/one-dark-pro.json" "${PI_AGENT}/themes/one-dark-pro.json"
+  ok "one-dark-pro"
+else
+  warn "one-dark-pro.json — not found"
+fi
+
+# ── 10. Keybindings ───────────────────────────────────────────────────────────
+header "Keybindings"
+if [[ -f "${SCRIPT_DIR}/keybindings.json" ]]; then
+  cp "${SCRIPT_DIR}/keybindings.json" "${PI_AGENT}/keybindings.json"
+  ok "keybindings.json"
+else
+  warn "keybindings.json — not found"
+fi
+
+# ── 11. AGENTS.md ───────────────────────────────────────────────────────────────
 header "AGENTS.md"
 echo "  Model architecture?"
 echo "  1) Dense  (Claude, Anthropic, Llama)"

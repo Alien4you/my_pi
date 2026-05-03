@@ -413,6 +413,20 @@ export default function (pi: ExtensionAPI) {
 		return;
 	}
 
+	// Toggle state — resets to enabled on restart (safe default).
+	let guardEnabled = true;
+
+	pi.registerCommand("bash-guard", {
+		description: "Toggle bash-guard on/off. Usage: /bash-guard [on|off|toggle|status]",
+		handler: async (args: string | undefined, ctx: any) => {
+			const arg = (args ?? "").trim().toLowerCase();
+			if (arg === "on") guardEnabled = true;
+			else if (arg === "off") guardEnabled = false;
+			else if (arg !== "status") guardEnabled = !guardEnabled;
+			ctx.ui?.notify(`bash-guard: ${guardEnabled ? "ON" : "OFF"}`, guardEnabled ? "info" : "warning");
+		},
+	});
+
 	// Main session mode: interactive prompting.
 	pi.registerFlag("bash-guard-auto-allow", {
 		description: "If set, bash-guard will not block when no UI is available (non-interactive modes).",
@@ -426,6 +440,7 @@ export default function (pi: ExtensionAPI) {
 
 	pi.on("tool_call", async (event, ctx) => {
 		if (!isToolCallEventType("bash", event)) return;
+		if (!guardEnabled) return;
 
 		const command = event.input.command;
 		const risk = analyzeBashCommand(command);
