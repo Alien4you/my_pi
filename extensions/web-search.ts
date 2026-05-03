@@ -1,16 +1,10 @@
 /**
- * Web Search + Fetch extension
+ * Web Search extension
  *
  * Tools:
- *   web_search(query, num_results?) — search the web, return title/url/snippet list
- *   web_fetch(url)                  — fetch URL, return as clean markdown
+ *   web_search(query, num_results?) — search via Jina (s.jina.ai), no key required
  *
- * Search providers (auto-detected from env, first found wins):
- *   BRAVE_API_KEY                         — Brave Search (recommended, 2k free/month)
- *   SERPER_API_KEY                        — Serper.dev
- *   GOOGLE_SEARCH_API_KEY + GOOGLE_CSE_ID — Google Custom Search
- *
- * Web fetch: Jina Reader (r.jina.ai) — free, no key required.
+ * Optional: set JINA_API_KEY for higher rate limits (free at jina.ai)
  */
 
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
@@ -22,63 +16,21 @@ interface SearchResult {
 	snippet: string;
 }
 
-async function searchBrave(query: string, n: number): Promise<SearchResult[]> {
-	const url = `https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(query)}&count=${n}`;
-	const res = await fetch(url, {
-		headers: { "X-Subscription-Token": process.env.BRAVE_API_KEY!, "Accept": "application/json" },
-		signal: AbortSignal.timeout(10000),
+async function searchJina(query: string, n: number): Promise<SearchResult[]> {
+	const headers: Record<string, string> = { "Accept": "application/json" };
+	if (process.env.JINA_API_KEY) headers["Authorization"] = `Bearer ${process.env.JINA_API_KEY}`;
+
+	const res = await fetch(`https://s.jina.ai/?q=${encodeURIComponent(query)}&count=${n}`, {
+		headers,
+		signal: AbortSignal.timeout(15000),
 	});
-	if (!res.ok) throw new Error(`Brave: ${res.status} ${await res.text()}`);
+	if (!res.ok) throw new Error(`Jina search: ${res.status} ${await res.text()}`);
 	const data = await res.json() as any;
-	return (data.web?.results ?? []).map((r: any) => ({
+	return (data.data ?? []).map((r: any) => ({
 		title: r.title ?? "",
 		url: r.url ?? "",
-		snippet: r.description ?? "",
+		snippet: r.description ?? r.content?.slice(0, 200) ?? "",
 	}));
-}
-
-async function searchSerper(query: string, n: number): Promise<SearchResult[]> {
-	const res = await fetch("https://google.serper.dev/search", {
-		method: "POST",
-		headers: { "X-API-KEY": process.env.SERPER_API_KEY!, "Content-Type": "application/json" },
-		body: JSON.stringify({ q: query, num: n }),
-		signal: AbortSignal.timeout(10000),
-	});
-	if (!res.ok) throw new Error(`Serper: ${res.status} ${await res.text()}`);
-	const data = await res.json() as any;
-	return (data.organic ?? []).map((r: any) => ({
-		title: r.title ?? "",
-		url: r.link ?? "",
-		snippet: r.snippet ?? "",
-	}));
-}
-
-async function searchGoogle(query: string, n: number): Promise<SearchResult[]> {
-	const params = new URLSearchParams({
-		q: query,
-		key: process.env.GOOGLE_SEARCH_API_KEY!,
-		cx: process.env.GOOGLE_CSE_ID!,
-		num: String(n),
-	});
-	const res = await fetch(`https://www.googleapis.com/customsearch/v1?${params}`, {
-		signal: AbortSignal.timeout(10000),
-	});
-	if (!res.ok) throw new Error(`Google: ${res.status} ${await res.text()}`);
-	const data = await res.json() as any;
-	return (data.items ?? []).map((r: any) => ({
-		title: r.title ?? "",
-		url: r.link ?? "",
-		snippet: r.snippet ?? "",
-	}));
-}
-
-async function runSearch(query: string, n: number): Promise<SearchResult[]> {
-	if (process.env.BRAVE_API_KEY) return searchBrave(query, n);
-	if (process.env.SERPER_API_KEY) return searchSerper(query, n);
-	if (process.env.GOOGLE_SEARCH_API_KEY && process.env.GOOGLE_CSE_ID) return searchGoogle(query, n);
-	throw new Error(
-		"No search provider configured. Set one of: BRAVE_API_KEY, SERPER_API_KEY, or GOOGLE_SEARCH_API_KEY + GOOGLE_CSE_ID",
-	);
 }
 
 function formatResults(results: SearchResult[]): string {
@@ -92,17 +44,16 @@ export default function (pi: ExtensionAPI) {
 	pi.registerTool({
 		name: "web_search",
 		label: "Web Search",
-		description: "Search the web. Returns title, URL, and snippet for each result.",
+		description: "Search the web via Jina. Returns title, URL, and snippet for each result. No API key required.",
 		promptSnippet: "Search the web for current information",
 		parameters: Type.Object({
 			query: Type.String({ description: "Search query" }),
-			num_results: Type.Optional(Type.Number({ description: "Number of results (default 10, max 20)" })),
+			num_results: Type.Optional(Type.Number({ description: "Number of results (default 5, max 10)" })),
 		}),
 		async execute(_id, params: { query: string; num_results?: number }) {
-			const n = Math.min(params.num_results ?? 10, 20);
-			const results = await runSearch(params.query, n);
+			const n = Math.min(params.num_results ?? 5, 10);
+			const results = await searchJina(params.query, n);
 			return { content: [{ type: "text", text: formatResults(results) }] };
 		},
 	});
-
 }
