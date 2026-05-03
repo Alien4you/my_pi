@@ -116,10 +116,13 @@ ok "Settings written."
 
 # ── 6. Packages ───────────────────────────────────────────────────────────────
 header "Packages"
-for pkg in context-mode @juicesharp/rpiv-btw @juicesharp/rpiv-pi; do
-  pi install "npm:$pkg" 2>/dev/null && ok "$pkg" || warn "$pkg — skipped"
+for pkg in \
+  "npm:context-mode" \
+  "npm:pi-btw" \
+  "npm:pi-ask-user" \
+  "git:github.com/tintinweb/pi-manage-todo-list@b75c449aa85ce328e9a8b632f62bf642aed40359"; do
+  pi install "$pkg" 2>/dev/null && ok "$pkg" || warn "$pkg — skipped"
 done
-warn "Run inside pi: /rpiv-setup  (silences sibling-deps warning)"
 
 # ── 7. MCP ────────────────────────────────────────────────────────────────────
 header "MCP"
