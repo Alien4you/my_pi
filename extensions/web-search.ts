@@ -81,17 +81,6 @@ async function runSearch(query: string, n: number): Promise<SearchResult[]> {
 	);
 }
 
-async function fetchUrl(url: string): Promise<string> {
-	const res = await fetch(`https://r.jina.ai/${url}`, {
-		headers: { "Accept": "text/markdown", "X-No-Cache": "true" },
-		signal: AbortSignal.timeout(30000),
-	});
-	if (!res.ok) throw new Error(`Jina fetch failed: ${res.status}`);
-	const text = await res.text();
-	if (text.length < 200) throw new Error("Fetched content too short — page may require JS or auth");
-	return text.length > 50000 ? text.slice(0, 50000) + "\n\n[truncated]" : text;
-}
-
 function formatResults(results: SearchResult[]): string {
 	if (results.length === 0) return "No results found.";
 	return results
@@ -116,17 +105,4 @@ export default function (pi: ExtensionAPI) {
 		},
 	});
 
-	pi.registerTool({
-		name: "web_fetch",
-		label: "Web Fetch",
-		description: "Fetch a URL and return its content as clean markdown. Use for reading articles, docs, or any web page.",
-		promptSnippet: "Fetch and read a web page",
-		parameters: Type.Object({
-			url: Type.String({ description: "Full URL to fetch (must start with http:// or https://)" }),
-		}),
-		async execute(_id, params: { url: string }) {
-			const text = await fetchUrl(params.url);
-			return { content: [{ type: "text", text }] };
-		},
-	});
 }

@@ -5,7 +5,7 @@ description: Web search skills. /web-search for quick lookup, /deep-search for m
 
 # Web Search Skills
 
-Two search modes. Use `web_search` and `web_fetch` tools.
+Two search modes. Use `web_search` tool for search. Use `ctx_fetch_and_index` + `ctx_search` (context-mode) to read URLs.
 
 ---
 
@@ -16,7 +16,7 @@ Two search modes. Use `web_search` and `web_fetch` tools.
 Process:
 1. Run `web_search` with the query (10 results)
 2. Scan snippets — if the answer is clear, respond immediately
-3. If snippets are insufficient, fetch the 1–2 most relevant URLs with `web_fetch`
+3. If snippets are insufficient, fetch 1–2 most relevant URLs with `ctx_fetch_and_index` then query with `ctx_search`
 4. Answer directly. Lead with the finding.
 
 Output format:
@@ -36,7 +36,7 @@ Process:
 1. Break the topic into 3–4 distinct search angles (direct answer / official source / practical experience / recent developments)
 2. Run `web_search` for each angle (5–8 results per query)
 3. Identify the 3–5 most authoritative/relevant URLs across all results
-4. Fetch each with `web_fetch`
+4. Fetch each with `ctx_fetch_and_index`, query with `ctx_search`
 5. Synthesize into a structured brief
 
 Source ranking: official docs > recent blog posts > forums > SEO content. Drop stale results (>2 years unless foundational).
