@@ -216,12 +216,20 @@ for skill_dir in "${SCRIPT_DIR}"/skills/*/; do
   fi
 done
 
-# ── Caveman (global ~/.agents/skills/) ────────────────────────────────────────
-header "Caveman"
-if npx --yes skills list 2>/dev/null | grep -q caveman; then
+# ── Skills (global ~/.agents/skills/) ─────────────────────────────────────────
+header "Skills (global)"
+SKILLS_LIST=$(npx --yes skills list 2>/dev/null)
+
+if echo "$SKILLS_LIST" | grep -q caveman; then
   ok "Caveman already installed — skipping."
 else
-  npx --yes skills add JuliusBrussee/caveman 2>/dev/null && ok "Caveman installed." || warn "Caveman install failed — run: npx skills add JuliusBrussee/caveman"
+  npx --yes skills add --yes JuliusBrussee/caveman 2>/dev/null && ok "Caveman installed." || warn "Caveman install failed — run: npx skills add --yes JuliusBrussee/caveman"
+fi
+
+if echo "$SKILLS_LIST" | grep -q "using-superpowers"; then
+  ok "Superpowers already installed — skipping."
+else
+  npx --yes skills add --yes obra/superpowers 2>/dev/null && ok "Superpowers installed." || warn "Superpowers install failed — run: npx skills add --yes obra/superpowers"
 fi
 
 # ── Themes ────────────────────────────────────────────────────────────────────
