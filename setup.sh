@@ -20,49 +20,68 @@ mkdir -p "$PI_AGENT"
 
 # ── 1. Provider ───────────────────────────────────────────────────────────────
 header "Provider"
-echo "  1) opencode-go"
-echo "  2) anthropic"
-echo "  3) openai"
-echo "  4) litellm"
-read -r -p "  Choice [1-4]: " PROVIDER_CHOICE
+AUTH_JSON="${PI_AGENT}/auth.json"
+if [[ -f "$AUTH_JSON" ]] && node -e "const d=JSON.parse(require('fs').readFileSync('${AUTH_JSON}','utf8')); process.exit(Object.keys(d).length>0?0:1)" 2>/dev/null; then
+  EXISTING_PROVIDER=$(node -e "const d=JSON.parse(require('fs').readFileSync('${AUTH_JSON}','utf8')); console.log(Object.keys(d)[0])" 2>/dev/null)
+  EXISTING_MODEL=$(node -e "
+    const s='${PI_AGENT}/settings.json';
+    try { console.log(JSON.parse(require('fs').readFileSync(s,'utf8')).defaultModel||''); } catch {}
+  " 2>/dev/null)
+  echo "  Existing config found: provider=${EXISTING_PROVIDER}, model=${EXISTING_MODEL}"
+  read -r -p "  Reconfigure? [y/N]: " RECONFIGURE
+  if [[ "${RECONFIGURE,,}" != "y" ]]; then
+    PROVIDER="$EXISTING_PROVIDER"
+    DEFAULT_MODEL="$EXISTING_MODEL"
+    ok "Provider: $PROVIDER (kept existing)"
+    SKIP_AUTH=1
+  fi
+fi
 
-case "$PROVIDER_CHOICE" in
-  1)
-    PROVIDER="opencode-go"
-    DEFAULT_MODEL="opencode-go/claude-sonnet-4-5"
-    read -r -s -p "  API key: " API_KEY; echo
-    PROVIDER_CONFIG="{\"type\":\"api_key\",\"key\":\"$API_KEY\"}"
-    grep -qF "$API_KEY" "$PROFILE" 2>/dev/null || echo "export OPENCODE_GO_API_KEY=\"$API_KEY\"" >> "$PROFILE"
-    ;;
-  2)
-    PROVIDER="anthropic"
-    DEFAULT_MODEL="anthropic/claude-sonnet-4-5"
-    read -r -s -p "  API key: " API_KEY; echo
-    PROVIDER_CONFIG="{\"type\":\"api_key\",\"key\":\"$API_KEY\"}"
-    grep -qF "$API_KEY" "$PROFILE" 2>/dev/null || echo "export ANTHROPIC_API_KEY=\"$API_KEY\"" >> "$PROFILE"
-    ;;
-  3)
-    PROVIDER="openai"
-    DEFAULT_MODEL="openai/gpt-4o"
-    read -r -s -p "  API key: " API_KEY; echo
-    read -r -p "  Base URL (blank = default): " BASE_URL
-    if [[ -n "$BASE_URL" ]]; then
-      PROVIDER_CONFIG="{\"type\":\"api_key\",\"key\":\"$API_KEY\",\"baseUrl\":\"$BASE_URL\"}"
-    else
+if [[ "${SKIP_AUTH:-0}" != "1" ]]; then
+  echo "  1) opencode-go"
+  echo "  2) anthropic"
+  echo "  3) openai"
+  echo "  4) litellm"
+  read -r -p "  Choice [1-4]: " PROVIDER_CHOICE
+
+  case "$PROVIDER_CHOICE" in
+    1)
+      PROVIDER="opencode-go"
+      DEFAULT_MODEL="opencode-go/claude-sonnet-4-5"
+      read -r -s -p "  API key: " API_KEY; echo
       PROVIDER_CONFIG="{\"type\":\"api_key\",\"key\":\"$API_KEY\"}"
-    fi
-    grep -qF "$API_KEY" "$PROFILE" 2>/dev/null || echo "export OPENAI_API_KEY=\"$API_KEY\"" >> "$PROFILE"
-    ;;
-  4)
-    PROVIDER="litellm"
-    read -r -p "  Base URL: " BASE_URL
-    read -r -s -p "  API key (blank if none): " API_KEY; echo
-    read -r -p "  Default model (e.g. litellm/claude-sonnet-4-5): " DEFAULT_MODEL
-    PROVIDER_CONFIG="{\"type\":\"api_key\",\"key\":\"${API_KEY:-none}\",\"baseUrl\":\"$BASE_URL\"}"
-    ;;
-  *) die "Invalid choice." ;;
-esac
-ok "Provider: $PROVIDER"
+      grep -qF "$API_KEY" "$PROFILE" 2>/dev/null || echo "export OPENCODE_GO_API_KEY=\"$API_KEY\"" >> "$PROFILE"
+      ;;
+    2)
+      PROVIDER="anthropic"
+      DEFAULT_MODEL="anthropic/claude-sonnet-4-5"
+      read -r -s -p "  API key: " API_KEY; echo
+      PROVIDER_CONFIG="{\"type\":\"api_key\",\"key\":\"$API_KEY\"}"
+      grep -qF "$API_KEY" "$PROFILE" 2>/dev/null || echo "export ANTHROPIC_API_KEY=\"$API_KEY\"" >> "$PROFILE"
+      ;;
+    3)
+      PROVIDER="openai"
+      DEFAULT_MODEL="openai/gpt-4o"
+      read -r -s -p "  API key: " API_KEY; echo
+      read -r -p "  Base URL (blank = default): " BASE_URL
+      if [[ -n "$BASE_URL" ]]; then
+        PROVIDER_CONFIG="{\"type\":\"api_key\",\"key\":\"$API_KEY\",\"baseUrl\":\"$BASE_URL\"}"
+      else
+        PROVIDER_CONFIG="{\"type\":\"api_key\",\"key\":\"$API_KEY\"}"
+      fi
+      grep -qF "$API_KEY" "$PROFILE" 2>/dev/null || echo "export OPENAI_API_KEY=\"$API_KEY\"" >> "$PROFILE"
+      ;;
+    4)
+      PROVIDER="litellm"
+      read -r -p "  Base URL: " BASE_URL
+      read -r -s -p "  API key (blank if none): " API_KEY; echo
+      read -r -p "  Default model (e.g. litellm/claude-sonnet-4-5): " DEFAULT_MODEL
+      PROVIDER_CONFIG="{\"type\":\"api_key\",\"key\":\"${API_KEY:-none}\",\"baseUrl\":\"$BASE_URL\"}"
+      ;;
+    *) die "Invalid choice." ;;
+  esac
+  ok "Provider: $PROVIDER"
+fi
 
 # ── 2. Node.js ────────────────────────────────────────────────────────────────
 header "Node.js"
@@ -86,14 +105,18 @@ ok "Pi $(pi --version 2>/dev/null | head -1 || echo ready)"
 
 # ── 4. Auth ───────────────────────────────────────────────────────────────────
 header "Auth"
-node -e "
-  const fs = require('fs'), p = '${PI_AGENT}/auth.json';
-  let d = {};
-  try { d = JSON.parse(fs.readFileSync(p, 'utf8')); } catch {}
-  d['${PROVIDER}'] = ${PROVIDER_CONFIG};
-  fs.writeFileSync(p, JSON.stringify(d, null, 2), { mode: 0o600 });
-"
-ok "Auth written ($PI_AGENT/auth.json)"
+if [[ "${SKIP_AUTH:-0}" == "1" ]]; then
+  ok "Auth kept (existing config)."
+else
+  node -e "
+    const fs = require('fs'), p = '${PI_AGENT}/auth.json';
+    let d = {};
+    try { d = JSON.parse(fs.readFileSync(p, 'utf8')); } catch {}
+    d['${PROVIDER}'] = ${PROVIDER_CONFIG};
+    fs.writeFileSync(p, JSON.stringify(d, null, 2), { mode: 0o600 });
+  "
+  ok "Auth written ($PI_AGENT/auth.json)"
+fi
 
 # ── 5. Settings ───────────────────────────────────────────────────────────────
 header "Settings"
@@ -191,6 +214,14 @@ for skill_dir in "${SCRIPT_DIR}"/skills/*/; do
     ok "${skill}"
   fi
 done
+
+# ── Caveman (global ~/.agents/skills/) ────────────────────────────────────────
+header "Caveman"
+if npx --yes skills list 2>/dev/null | grep -q caveman; then
+  ok "Caveman already installed — skipping."
+else
+  npx --yes skills add JuliusBrussee/caveman 2>/dev/null && ok "Caveman installed." || warn "Caveman install failed — run: npx skills add JuliusBrussee/caveman"
+fi
 
 # ── Themes ────────────────────────────────────────────────────────────────────
 header "Themes"
