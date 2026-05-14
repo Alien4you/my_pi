@@ -67,16 +67,7 @@ PI_MCP="${PI_AGENT}/mcp.json"
 if [[ ! -f "$PI_MCP" ]]; then
   cat > "$PI_MCP" <<'EOF'
 {
-  "mcpServers": {
-    "context7": {
-      "command": "npx",
-      "args": ["-y", "@upstash/context7-mcp"]
-    },
-    "memory": {
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-memory"]
-    }
-  }
+  "mcpServers": {}
 }
 EOF
   ok "MCP written."
