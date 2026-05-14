@@ -1,13 +1,8 @@
 /**
- * Web Search extension
+ * Web Search extension — DuckDuckGo, no API key required
  *
  * Tools:
- *   web_search(query, num_results?) — search the web, no API key required
- *
- * Providers (first configured wins):
- *   JINA_API_KEY  — Jina Search (free key at jina.ai)
- *   TAVILY_API_KEY — Tavily (1k/month free, best quality)
- *   fallback      — DuckDuckGo HTML scrape (no key, limited results)
+ *   web_search(query, num_results?)
  */
 
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
@@ -17,39 +12,6 @@ interface SearchResult {
 	title: string;
 	url: string;
 	snippet: string;
-}
-
-async function searchJina(query: string, n: number): Promise<SearchResult[]> {
-	const res = await fetch(`https://s.jina.ai/?q=${encodeURIComponent(query)}&count=${n}`, {
-		headers: {
-			"Accept": "application/json",
-			"Authorization": `Bearer ${process.env.JINA_API_KEY}`,
-		},
-		signal: AbortSignal.timeout(15000),
-	});
-	if (!res.ok) throw new Error(`Jina: ${res.status}`);
-	const data = await res.json() as any;
-	return (data.data ?? []).map((r: any) => ({
-		title: r.title ?? "",
-		url: r.url ?? "",
-		snippet: r.description ?? r.content?.slice(0, 200) ?? "",
-	}));
-}
-
-async function searchTavily(query: string, n: number): Promise<SearchResult[]> {
-	const res = await fetch("https://api.tavily.com/search", {
-		method: "POST",
-		headers: { "Content-Type": "application/json" },
-		body: JSON.stringify({ api_key: process.env.TAVILY_API_KEY, query, max_results: n }),
-		signal: AbortSignal.timeout(15000),
-	});
-	if (!res.ok) throw new Error(`Tavily: ${res.status}`);
-	const data = await res.json() as any;
-	return (data.results ?? []).map((r: any) => ({
-		title: r.title ?? "",
-		url: r.url ?? "",
-		snippet: r.content?.slice(0, 200) ?? "",
-	}));
 }
 
 async function searchDDG(query: string, n: number): Promise<SearchResult[]> {
@@ -74,8 +36,6 @@ async function searchDDG(query: string, n: number): Promise<SearchResult[]> {
 }
 
 async function runSearch(query: string, n: number): Promise<SearchResult[]> {
-	if (process.env.JINA_API_KEY) return searchJina(query, n);
-	if (process.env.TAVILY_API_KEY) return searchTavily(query, n);
 	return searchDDG(query, n);
 }
 
@@ -90,7 +50,7 @@ export default function (pi: ExtensionAPI) {
 	pi.registerTool({
 		name: "web_search",
 		label: "Web Search",
-		description: "Search the web. Returns title, URL, and snippet. Set JINA_API_KEY or TAVILY_API_KEY for best results; falls back to DuckDuckGo.",
+		description: "Search the web via DuckDuckGo. Returns title, URL, and snippet.",
 		promptSnippet: "Search the web for current information",
 		parameters: Type.Object({
 			query: Type.String({ description: "Search query" }),
