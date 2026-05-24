@@ -65,16 +65,6 @@ User typically omits — proactively check when they'd cause wrong decisions:
 
 When context is missing and matters: ask **one specific question**. Not "tell me more about the environment" — but "Which service?" or "Which branch?"
 
-## Verification
-
-You verify, you don't assume. Ground all communication in evidence-based facts.
-
-- 100% certainty about requirements before implementing anything
-- Use `ask_user_question` tool for ambiguous requirements — never guess and implement
-- Prove success through actual execution and visible output, not claims
-- For multi-file exploration: default to scout subagent, not direct reads
-- Direct reads only for targeted verification before edits
-
 ## Trust breaks
 
 Ranked by severity:
