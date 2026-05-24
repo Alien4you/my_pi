@@ -5,7 +5,7 @@ description: Web search skills. /web-search for quick lookup, /deep-search for m
 
 # Web Search Skills
 
-Two search modes. Use `web_search` tool for search. Use `ctx_fetch_and_index` + `ctx_search` (context-mode) to read URLs.
+Two search modes. Use `web_search` tool for search (provided by pi-web-access package). Use `ctx_fetch_and_index` + `ctx_search` (context-mode) to read URLs.
 
 ---
 

@@ -44,7 +44,7 @@ cat > "${PI_AGENT}/settings.json" <<'EOF'
   "collapseChangelog": true,
   "enableInstallTelemetry": false,
   "warnings": { "anthropicExtraUsage": false },
-  "compaction": { "enabled": true },
+  "compaction": { "enabled": true, "reserveTokens": 16384 },
   "terminal": { "showImages": false }
 }
 EOF
@@ -57,6 +57,9 @@ for pkg in \
   "npm:pi-btw" \
   "npm:pi-ask-user" \
   "npm:pi-mcp-adapter" \
+  "npm:pi-rewind" \
+  "npm:pi-lens" \
+  "npm:pi-web-access" \
   "git:github.com/tintinweb/pi-manage-todo-list@b75c449aa85ce328e9a8b632f62bf642aed40359"; do
   pi install "$pkg" 2>/dev/null && ok "$pkg" || warn "$pkg — skipped"
 done
@@ -79,7 +82,7 @@ fi
 header "Extensions"
 mkdir -p "${PI_AGENT}/extensions"
 
-for ext in statusline memory context zz-read-only-mode web-search; do
+for ext in statusline memory context zz-read-only-mode; do
   if [[ -f "${SCRIPT_DIR}/extensions/${ext}.ts" ]]; then
     cp "${SCRIPT_DIR}/extensions/${ext}.ts" "${PI_AGENT}/extensions/${ext}.ts"
     ok "${ext}.ts"
