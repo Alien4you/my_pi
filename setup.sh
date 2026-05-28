@@ -93,6 +93,7 @@ done
 
 for pkg in bash-guard; do
   if [[ -d "${SCRIPT_DIR}/extensions/${pkg}" ]]; then
+    rm -rf "${PI_AGENT}/extensions/${pkg}"
     cp -r "${SCRIPT_DIR}/extensions/${pkg}" "${PI_AGENT}/extensions/${pkg}"
     (cd "${PI_AGENT}/extensions/${pkg}" && npm install --silent 2>/dev/null) && ok "${pkg}" || warn "${pkg} — npm install failed"
   else
@@ -101,6 +102,7 @@ for pkg in bash-guard; do
 done
 
 if [[ -d "${SCRIPT_DIR}/extensions/subagents" ]]; then
+  rm -rf "${PI_AGENT}/extensions/subagents"
   cp -r "${SCRIPT_DIR}/extensions/subagents" "${PI_AGENT}/extensions/subagents"
   ok "subagents"
 else
@@ -109,6 +111,7 @@ fi
 
 # ── 7. Skills ─────────────────────────────────────────────────────────────────
 header "Skills"
+rm -rf "${PI_AGENT}/skills"
 mkdir -p "${PI_AGENT}/skills"
 for skill_dir in "${SCRIPT_DIR}"/skills/*/; do
   skill=$(basename "$skill_dir")
